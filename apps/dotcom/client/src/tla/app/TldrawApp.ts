@@ -1217,14 +1217,14 @@ export class TldrawApp {
 		}
 	}
 
-	navigateToWorkspaceFiles(workspaceId: string) {
+	navigateToWorkspaceFiles(workspaceId: string, opts: { replace?: boolean } = {}) {
 		const files = this.getWorkspaceFilesSorted(workspaceId)
 
 		if (!files.length) {
 			return false
 		}
 
-		this.navigate(routes.tlaFile(files[0]!.fileId))
+		this.navigate(routes.tlaFile(files[0]!.fileId), opts)
 		return true
 	}
 }
