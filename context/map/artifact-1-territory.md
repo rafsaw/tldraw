@@ -6,6 +6,23 @@ Baza: **1507 commitów**, ~16 700 zmian plików.
 Filtry szumu: lockfile'y, `*.snap`, `api-report.api.md`, `package.json` (bumpy wersji),
 `version.ts`, `lerna.json`, `locales-compiled/*` i tłumaczenia per-język.
 
+## TL;DR
+
+**Repo snapshot:** TypeScript monorepo (Yarn 4), 104k+ TS/JS files, 4.2 GB, 224 contributors, dependency-cruiser installed.
+
+**Hiearchia churn (realnie żywe obszary):**
+- SDK core: `packages/editor/src` (751 zmian) ↔ `packages/tldraw/src` (1757 zmian) — **silnie sprzężone (169 wspólnych commitów)**
+- Aplikacja: `apps/dotcom/client` (3366, ale zawyżone przez `fairy` — usunięty w Q2)
+- Przykłady: `apps/examples/src` (1297 zmian)
+
+**Epicentrum:** Plik `Editor.ts` (81 zmian) — 2× częściej dotykany niż inne źródła.
+
+**Ostrzeżenie:** Churn ranking jest zawyżony przez martwe kody:
+- `fairy` feature całkowicie usunięty z repo (1354 zmian historii, brak dziś)
+- Stare `TLDrawDurableObject.ts` zastąpione nowymi varianto (TLFile*, TLUser*, TLStats*, TLLogger*)
+
+**Wzór pracy:** SDK-core (Q1) → wielki push produktowy (Q2) → docs/examples (Q3) → powrót do core (Q4). Oscyluje między **SDK** a **dotcom-product**.
+
 ---
 
 ## 1. Gdzie projekt był realnie dotykany (TOP, hands-on)
