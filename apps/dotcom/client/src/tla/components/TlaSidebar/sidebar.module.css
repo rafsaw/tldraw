@@ -254,7 +254,7 @@
 .sidebar[data-workspaces='true'] .sidebarTopRow {
 	height: 44px;
 	padding: 3px 8px 0px 4px;
-	gap: 8px;
+	gap: var(--tl-space-3);
 }
 
 /* Workspace link */
@@ -509,7 +509,7 @@
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 4px;
+	gap: var(--tl-space-2);
 	font-weight: bold;
 	color: var(--tla-color-text-3);
 }
@@ -785,7 +785,7 @@
 	flex-direction: row;
 	align-items: center;
 	justify-content: flex-start;
-	gap: 8px;
+	gap: var(--tl-space-3);
 	position: relative;
 	pointer-events: none;
 	z-index: 2;
@@ -811,7 +811,7 @@
 	justify-content: flex-start;
 	padding: 0px 8px 0px calc(8px + var(--tla-sidebar-group-item-padding-left, 0px));
 	outline-offset: -2px;
-	gap: 8px;
+	gap: var(--tl-space-3);
 	position: relative;
 }
 
@@ -978,7 +978,7 @@
 	margin-left: -4px;
 	margin-right: -6px;
 	margin-bottom: 8px;
-	padding: 2px;
+	padding: var(--tl-space-1);
 	display: flex;
 	align-items: center;
 	height: 36px;
@@ -1006,7 +1006,7 @@
 	display: flex;
 	align-items: center;
 	flex: 1;
-	gap: 4px;
+	gap: var(--tl-space-2);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
