@@ -472,7 +472,7 @@ export class InputsManager {
 	private _velocityPrevPoint = new Vec()
 
 	/**
-	 * Update the pointer velocity based on elapsed time. Called each frame.
+	 * Update the pointer velocity based on elapsed time. Called by the tick manager.
 	 * @param elapsed - The time elapsed since the last tick in milliseconds.
 	 * @internal
 	 */

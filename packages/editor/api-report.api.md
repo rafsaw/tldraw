@@ -1692,6 +1692,21 @@ export class EditorAtom<T> {
 // @public (undocumented)
 export const EditorContext: React_3.Context<Editor | null>;
 
+// @internal (undocumented)
+export abstract class EditorManager {
+    constructor(editor: Editor);
+    // (undocumented)
+    protected readonly disposables: Set<() => void>;
+    // (undocumented)
+    dispose(): void;
+    // (undocumented)
+    protected readonly editor: Editor;
+    // (undocumented)
+    protected onEditor<E extends keyof TLEventMap>(event: E, fn: (...args: TLEventMap[E]) => void): void;
+    // (undocumented)
+    protected _register(dispose: () => void): () => void;
+}
+
 // @public (undocumented)
 export function EditorProvider({ editor, children }: EditorProviderProps): JSX.Element;
 
@@ -3365,14 +3380,12 @@ export class ThemeManager {
 }
 
 // @internal (undocumented)
-export class TickManager {
+export class TickManager extends EditorManager {
     constructor(editor: Editor);
     // (undocumented)
     cancelRaf?: (() => void) | null;
     // (undocumented)
     dispose(): void;
-    // (undocumented)
-    editor: Editor;
     // (undocumented)
     isPaused: boolean;
     // (undocumented)
