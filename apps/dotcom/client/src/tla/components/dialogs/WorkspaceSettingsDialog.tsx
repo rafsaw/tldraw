@@ -4,8 +4,10 @@ import { MouseEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
 	TldrawUiButton,
+	TldrawUiButtonLabel,
 	TldrawUiDialogBody,
 	TldrawUiDialogCloseButton,
+	TldrawUiDialogFooter,
 	TldrawUiDialogHeader,
 	TldrawUiDialogTitle,
 	TldrawUiInput,
@@ -36,9 +38,7 @@ const messages = defineMessages({
 	owner: { defaultMessage: 'Owner' },
 	member: { defaultMessage: 'Member' },
 	you: { defaultMessage: 'you' },
-	dangerZone: { defaultMessage: 'Danger zone' },
-	leaveWorkspace: { defaultMessage: 'Leave workspace…' },
-	deleteWorkspaceMsg: { defaultMessage: 'Delete workspace…' },
+	deleteWorkspaceMsg: { defaultMessage: 'Delete workspace' },
 	save: { defaultMessage: 'Save' },
 	cancel: { defaultMessage: 'Cancel' },
 	confirmLeave: { defaultMessage: 'Are you sure you want to leave this workspace?' },
@@ -46,6 +46,10 @@ const messages = defineMessages({
 		defaultMessage: 'Are you sure you want to delete this workspace? This action cannot be undone.',
 	},
 	leaveAction: { defaultMessage: 'Leave workspace' },
+	leave: { defaultMessage: 'Leave' },
+	lastOwnerLeaveHint: {
+		defaultMessage: 'A workspace must keep at least one owner. Make someone else an owner first.',
+	},
 	deleteAction: { defaultMessage: 'Delete workspace' },
 	removeMember: { defaultMessage: 'Remove' },
 	removeAction: { defaultMessage: 'Remove member' },
@@ -71,6 +75,7 @@ export function WorkspaceSettingsDialog({ workspaceId, onClose }: WorkspaceSetti
 	const memberMsg = useMsg(messages.member)
 	const youMsg = useMsg(messages.you)
 	const removeMemberMsg = useMsg(messages.removeMember)
+	const leaveMsg = useMsg(messages.leave)
 
 	// Get workspace data
 	const workspaceMembership = useValue(
@@ -291,7 +296,6 @@ export function WorkspaceSettingsDialog({ workspaceId, onClose }: WorkspaceSetti
 				</div>
 
 				{/* Members Section */}
-				<hr className={styles.divider} />
 				<div className={styles.section}>
 					<label className={styles.sectionLabelLarge}>
 						<F {...messages.members} />{' '}
@@ -311,10 +315,10 @@ export function WorkspaceSettingsDialog({ workspaceId, onClose }: WorkspaceSetti
 								return 0
 							})
 							.map((member) => {
-								// Roles are shown to everyone; only editMembers holders can change them,
-								// and never their own role while they're the sole owner.
-								const canEditThisRole =
-									canEditMembers && (member.userId !== app.getUser().id || ownersCount > 1)
+								const isSelf = member.userId === app.getUser().id
+								// Whether this member is an owner; used to hide non-owner roles from
+								// viewers who can't edit members.
+								const memberIsOwner = can(member.role, 'editMembers')
 								return (
 									<div key={member.userId} className={styles.memberItem}>
 										<div
@@ -329,7 +333,7 @@ export function WorkspaceSettingsDialog({ workspaceId, onClose }: WorkspaceSetti
 											{member.userName}
 											{member.userId === app.getUser().id ? ` (${youMsg})` : ''}
 										</span>
-										{canEditThisRole ? (
+										{canEditMembers ? (
 											<TlaMenuSelect
 												id={`workspace-member-role-${member.userId}`}
 												label={roleLabels[member.role]}
@@ -337,8 +341,19 @@ export function WorkspaceSettingsDialog({ workspaceId, onClose }: WorkspaceSetti
 												usePortal
 												options={roleOptions}
 												actions={
-													member.userId === app.getUser().id
-														? undefined
+													isSelf
+														? [
+																{
+																	id: 'leave',
+																	label: leaveMsg,
+																	destructive: true,
+																	disabled: !canLeave,
+																	tooltip: canLeave ? undefined : (
+																		<F {...messages.lastOwnerLeaveHint} />
+																	),
+																	onSelect: openLeaveConfirmDialog,
+																},
+															]
 														: [
 																{
 																	id: 'remove',
@@ -362,37 +377,28 @@ export function WorkspaceSettingsDialog({ workspaceId, onClose }: WorkspaceSetti
 													}
 												}}
 											/>
-										) : (
+										) : isSelf ? (
+											<button className={styles.leaveButton} onClick={openLeaveConfirmDialog}>
+												<F {...messages.leave} />
+											</button>
+										) : memberIsOwner ? (
 											<span className={styles.memberRole}>{roleLabels[member.role]}</span>
-										)}
+										) : null}
 									</div>
 								)
 							})}
 					</div>
 				</div>
-
-				{/* Danger Zone */}
-				<hr className={styles.divider} />
-				<div>
-					<label className={styles.sectionLabelLarge}>
-						<F {...messages.dangerZone} />
-					</label>
-					<div className={styles.dangerZoneActions}>
-						{canLeave && (
-							<button className={styles.inlineButton} onClick={openLeaveConfirmDialog}>
-								<F {...messages.leaveWorkspace} />
-							</button>
-						)}
-						{can(role, 'deleteWorkspace') && (
-							<button className={styles.inlineButton} onClick={openDeleteConfirmDialog}>
-								<F {...messages.deleteWorkspaceMsg} />
-							</button>
-						)}
-					</div>
-				</div>
-
-				{/* Confirmation handled via tldraw dialogs */}
 			</TldrawUiDialogBody>
+			{can(role, 'deleteWorkspace') && (
+				<TldrawUiDialogFooter className="tlui-dialog__footer__actions">
+					<TldrawUiButton type="danger" onClick={openDeleteConfirmDialog}>
+						<TldrawUiButtonLabel>
+							<F {...messages.deleteWorkspaceMsg} />
+						</TldrawUiButtonLabel>
+					</TldrawUiButton>
+				</TldrawUiDialogFooter>
+			)}
 		</_Tooltip.Provider>
 	)
 }

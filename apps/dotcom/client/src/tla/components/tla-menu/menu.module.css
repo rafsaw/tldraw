@@ -165,7 +165,9 @@ div:has(> .menuSelectContent):not([data-radix-popper-content-wrapper]) {
 	position: relative;
 	display: flex;
 	align-items: center;
-	padding: 8px;
+	/* Right padding mirrors the left check-indicator space (15px icon + 4px gap)
+	   so the label sits symmetrically within the option. */
+	padding: 8px 27px 8px 8px;
 	gap: 4px;
 	cursor: pointer;
 	z-index: 1;
@@ -225,7 +227,8 @@ div:has(> .menuSelectContent):not([data-radix-popper-content-wrapper]) {
 
 .menuSelectSeparator {
 	height: 1px;
-	margin: 4px;
+	/* Full-bleed: no horizontal margin so the rule spans the whole dropdown. */
+	margin: 4px 0;
 	background-color: var(--tl-color-divider);
 }
 

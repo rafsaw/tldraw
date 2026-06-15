@@ -147,6 +147,12 @@
       "value": "Today"
     }
   ],
+  "1ffd709937": [
+    {
+      "type": 0,
+      "value": "A workspace must keep at least one owner. Make someone else an owner first."
+    }
+  ],
   "21f66c9c00": [
     {
       "type": 0,
@@ -253,12 +259,6 @@
     {
       "type": 0,
       "value": "Contact the owner to request access."
-    }
-  ],
-  "44680c1fa7": [
-    {
-      "type": 0,
-      "value": "Leave workspace…"
     }
   ],
   "44db318ee5": [
@@ -757,12 +757,6 @@
       "value": "Sign in with Google"
     }
   ],
-  "95b56f4cd6": [
-    {
-      "type": 0,
-      "value": "Delete workspace…"
-    }
-  ],
   "95d2109dc8": [
     {
       "type": 0,
@@ -877,6 +871,12 @@
     {
       "type": 0,
       "value": "Submit"
+    }
+  ],
+  "a52945dbe2": [
+    {
+      "type": 0,
+      "value": "Leave"
     }
   ],
   "a6cc403d56": [
@@ -1259,12 +1259,6 @@
     {
       "type": 0,
       "value": "You have been invited to join workspace:"
-    }
-  ],
-  "ea0626ac5a": [
-    {
-      "type": 0,
-      "value": "Danger zone"
     }
   ],
   "ea4788705e": [

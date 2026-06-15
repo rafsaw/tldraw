@@ -71,6 +71,9 @@
   "1dd1c5fb7f": {
     "translation": "Today"
   },
+  "1ffd709937": {
+    "translation": "A workspace must keep at least one owner. Make someone else an owner first."
+  },
   "21f66c9c00": {
     "translation": "Workspace name"
   },
@@ -124,9 +127,6 @@
   },
   "42e53c47c1": {
     "translation": "Contact the owner to request access."
-  },
-  "44680c1fa7": {
-    "translation": "Leave workspace…"
   },
   "44db318ee5": {
     "translation": "Get help on Discord"
@@ -353,9 +353,6 @@
   "95aacd4d4a": {
     "translation": "Sign in with Google"
   },
-  "95b56f4cd6": {
-    "translation": "Delete workspace…"
-  },
   "95d2109dc8": {
     "translation": "Build with the tldraw SDK"
   },
@@ -406,6 +403,9 @@
   },
   "a4d3b161ce": {
     "translation": "Submit"
+  },
+  "a52945dbe2": {
+    "translation": "Leave"
   },
   "a6cc403d56": {
     "translation": "Anyone with the link"
@@ -554,9 +554,6 @@
   },
   "e9e0f16850": {
     "translation": "You have been invited to join workspace:"
-  },
-  "ea0626ac5a": {
-    "translation": "Danger zone"
   },
   "ea4788705e": {
     "translation": "Cancel"

@@ -203,9 +203,16 @@
 }
 
 .section {
-	margin-bottom: 12px;
+	/* Sections are separated by spacing alone (no dividers), so the gap needs to be
+	   clearly larger than the ~8px spacing within a section. */
+	margin-bottom: 20px;
 	display: flex;
 	flex-direction: column;
+}
+/* No trailing gap when a section is the last thing in the dialog (e.g. the member
+   list, for non-owners who have no destroy action below it). */
+.section:last-child {
+	margin-bottom: 0;
 }
 
 .sectionLabel {
@@ -250,12 +257,6 @@
 	height: 40px;
 }
 
-.divider {
-	margin: 12px 0;
-	border: none;
-	border-top: 1px solid #e0e0e0;
-}
-
 .membersList {
 	display: flex;
 	flex-direction: column;
@@ -289,24 +290,17 @@
 	font-size: 12px;
 }
 
-.dangerZoneActions {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 8px;
-}
-
-.inlineButton {
+/* "Leave" affordance shown where a member's role would be, for non-editMembers. */
+.leaveButton {
 	background: none;
 	border: none;
 	cursor: pointer;
 	font-size: 12px;
-	font-weight: 500;
-	display: inline-block;
-	padding: 4px 0px;
-	color: var(--tla-color-text-1);
+	padding: 0;
+	color: var(--tla-color-text-3);
 }
-.inlineButton:hover {
+.leaveButton:hover {
+	color: var(--tla-color-text-1);
 	text-decoration: underline;
 }
 
