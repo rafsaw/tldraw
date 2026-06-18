@@ -9,6 +9,7 @@ tags: [research, codebase, dotcom, useAppState, TldrawApp, zero, sync, blast-rad
 status: complete
 last_updated: 2026-06-17
 last_updated_by: Rafal S
+last_updated_note: 'Dodano sekcję Ast-grep verification — strukturalna weryfikacja liczb (ast-grep + rg); korekty ilościowe konsumentów, z.mutate, dotcom-shared, granic <Tldraw>.'
 ---
 
 # Research: Przepływ stanu aplikacji dotcom przez `useAppState`
@@ -35,9 +36,10 @@ gettery opakowane w `useValue`.
 
 Trzy kluczowe ustalenia:
 
-1. **Realny blast radius leży o warstwę niżej niż `useAppState`.** ~50 komponentów konsumuje hook, ale
-   prawdziwe sprzężenie to typy/mutatory w `@tldraw/dotcom-shared` (importowane przez **73 pliki**, w tym
-   sync-worker i migracje zero-cache). Zmiana schematu = zmiana klienta + workera + migracji DB **razem**.
+1. **Realny blast radius leży o warstwę niżej niż `useAppState`.** **59 plików / 69 wywołań** konsumuje hook
+   (zweryfikowane ast-grep/rg), ale prawdziwe sprzężenie to typy/mutatory w `@tldraw/dotcom-shared`
+   (importowane przez **dokładnie 73 pliki**, w tym **29 plików sync-workera** i migracje zero-cache).
+   Zmiana schematu = zmiana klienta + workera + migracji DB **razem**.
 2. **Brak izolacji testowej.** Nie istnieje żaden `TestAppState` / fabryka / mock dla `TldrawApp` — w
    przeciwieństwie do SDK, które ma `TestEditor`. `TldrawApp` jest niemożliwy do instancjonowania w teście
    jednostkowym bez sieci (konstruktor bezwarunkowo otwiera Zero/WebSocket). Pokrycie ścieżki stanu jest
@@ -117,9 +119,11 @@ pokazuje spinner dopóki `app` jest null (`:47`).
 
 ### Kto konsumuje wynik hooka
 
-- **EVIDENCE** — ~53 call-sites w ~50 plikach, wszystkie pod `apps/dotcom/client/src/`. Podział:
-  `useApp()` (~22 plików, wymaga app), `useMaybeApp()` (~28 plików, toleruje null), `isClientTooOld$` (1),
-  `AppStateProvider` (1). Potwierdza to (z lekkim zawyżeniem) "51+" z `repo-map.md:79`.
+- **EVIDENCE (zweryfikowane ast-grep/rg — patrz §Ast-grep verification)** — **69 wywołań w 59 plikach** pod
+  `apps/dotcom/client/src/`. Podział: `useApp()` — **26 wywołań w 21 plikach** (wymaga app);
+  `useMaybeApp()` — **43 wywołania w 39 plikach** (toleruje null); `isClientTooOld$` (1 plik konsumenta);
+  `AppStateProvider` (1 plik konsumenta). To **więcej** niż "51+" z `repo-map.md:79` — pierwotny szacunek
+  raportu ("~53/~50") był zaniżony, w szczególności `useMaybeApp` (realnie 39 plików, nie ~28).
 - Klastry: provider/root (`TlaRootProviders.tsx:35,229,325`, `RequireSignedInUser.tsx:6`); editor
   (`TlaEditor.tsx:93,314` + `editor-components/*` + `sneaky/*`, ~12 plików); sidebar
   (`TlaSidebar/components/*`, ~9); share/file menu + dialogi (~10); hooki (`useUser`, `useIsFilePinned`,
@@ -134,8 +138,9 @@ pokazuje spinner dopóki `app` jest null (`:47`).
   - `app.getFileState` / `app.updateFileState` — `TlaEditor.tsx:143,245,266,403`, `TlaFileMenu:164/165`.
   - `app.getWorkspaceMembership(s)` / `getWorkspaceFilesSorted` — ~10 sites (najnowszy klaster, migracja workspaces).
   - **`app.z.mutate.*`** — **bezpośredni dostęp do klienta Zero z pominięciem metod `TldrawApp`** —
-    `useDragTracking:129`, `WorkspaceSettingsDialog:102/114/129/202/296`, `TlaFileMenu:145/147/249/266/292`,
-    `TlaSidebarWorkspaceList:176` (~12 sites).
+    **zweryfikowane: 13 wywołań w 4 plikach** (`useDragTracking.ts:129`;
+    `WorkspaceSettingsDialog.tsx:102/114/129/202/296`; `TlaFileMenu.tsx:145/147/249/266/286/292`;
+    `TlaSidebarWorkspaceList.tsx:176`). Pierwotny raport pominął `TlaFileMenu.tsx:286`.
   - `app.sidebarState` (atom), `app.tlUser` (`TlaEditor.tsx:202,215,289`), `app.userId` (~10 stron, trywialne).
 
 ### Gdzie realnie zmienia się stan (mutatory)
@@ -152,7 +157,11 @@ pokazuje spinner dopóki `app` jest null (`:47`).
 
 ### Gdzie stan przechodzi do Editora / SDK / sync (boundary)
 
-Crossing dzieje się w całości w `TlaEditor.tsx` (`TlaEditorInner`):
+Crossing dla **app-connected** ścieżki dzieje się w całości w `TlaEditor.tsx` (`TlaEditorInner`). Uwaga
+(zweryfikowane rg): w kliencie dotcom jest **6 punktów montowania `<Tldraw>`** — `TlaEditor.tsx` (główny,
+app-connected), `LocalEditor.tsx`, oraz cztery editory legacy/publish/history (`TlaHistorySnapshotEditor`,
+`TlaPublishEditor`, `TlaLegacySnapshotEditor`, `TlaLegacyFileEditor`). `TlaEditor.tsx` jest **główną**, ale nie
+jedyną granicą app↔SDK; pozostałe nie konsumują pełnego `TldrawApp` (local/legacy/publish/history).
 
 - **App → Editor (EVIDENCE):** `const app = useMaybeApp()` (`:93`); `user={app?.tlUser}` (`:289`);
   presence `users` z `app.tlUser.userPreferences` (`:201-215`); store z `useSync(...)` (`:217-230`,
@@ -292,12 +301,14 @@ flowchart TD
 
 ### Miejsca o dużym blast radius
 
-- **EVIDENCE — największy: typy/mutatory `@tldraw/dotcom-shared` (73 pliki, 74 wystąpienia).** `TlaFile`
-  (`tlaSchema.ts:293`), `TlaFileState` (`:294`), `TlaUser` (`:292`), `TlaGroup` (`:295`), `TlaSchema` (`:291`),
-  `TlaMutators` (`mutators.ts:71`), `ZeroContext` (`queries.ts:7`). Importują je: klient, **sync-worker (9+
-  plików:** `ServerCrud.ts`, `TLUserDurableObject.ts`, `UserDataSyncer.ts`, `TLPostgresReplicator.ts`,
-  `TLFileDurableObject.ts`, `adminRoutes.ts`...**)**, migracje zero-cache. **INFERENCE** — zmiana wiersza
-  `Tla*` lub sygnatury mutatora to zmiana schema-level: klient + worker + migracje DB **razem**.
+- **EVIDENCE — największy: typy/mutatory `@tldraw/dotcom-shared` (zweryfikowane: dokładnie 73 pliki importują
+  `@tldraw/dotcom-shared`).** `TlaFile` (`tlaSchema.ts:293`), `TlaFileState` (`:294`), `TlaUser` (`:292`),
+  `TlaGroup` (`:295`), `TlaSchema` (`:291`), `TlaMutators` (`mutators.ts:71`), `ZeroContext` (`queries.ts:7`).
+  Importują je: klient, **sync-worker — zweryfikowane: 29 z tych 73 plików jest pod `sync-worker/`** (m.in.
+  `ServerCrud.ts`, `TLUserDurableObject.ts`, `UserDataSyncer.ts`, `TLPostgresReplicator.ts`,
+  `TLFileDurableObject.ts`, `adminRoutes.ts`), oraz migracje zero-cache. **INFERENCE** — zmiana wiersza
+  `Tla*` lub sygnatury mutatora to zmiana schema-level: klient + worker + migracje DB **razem**. Sprzężenie
+  klient↔worker jest **silniejsze** niż sugerował pierwotny szacunek raportu ("9+" → realnie 29 plików workera).
 
 ### Dynamiczne sprzężenia niewidoczne w importach
 
@@ -323,6 +334,35 @@ flowchart TD
   Clerk/Zero globalnie, mógłby umożliwić testy komponentowe — ale żaden test obecnie z tego nie korzysta).
 - **UNKNOWN** — czy testy worker-side (`apps/dotcom/*-worker`) pośrednio asertują kontrakty mutatorów
   `TldrawApp` (poza zakresem; nie sprawdzono).
+
+---
+
+## Ast-grep verification
+
+Weryfikacja strukturalna (nie semantyczna) liczb z raportu — `ast-grep` 0.43.0 + `ripgrep`, na commicie
+`2d148be9`. Komendy uruchamiane z `apps/dotcom/client/src` (call-sites) lub repo root (importy). Legenda:
+**potwierdzone** = liczba zgodna; **doprecyzowane** = liczba realna inna, kierunek wniosku bez zmian;
+**obalone** = wniosek wymaga korekty; **unknown** = nie dało się rozstrzygnąć strukturalnie.
+
+| Claim from report                                                 | Verification method                                                                                                                                                        | Result                       | Evidence                                                                                                                                                                                                                                                                                                 | Correction                                                   |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| ~53 call-sites `useApp`/`useMaybeApp`                             | `rg -n '\buseApp\(' \| wc -l` + `rg -n '\buseMaybeApp\(' \| wc -l` (scope `client/src`, bez `useAppState.tsx`); cross-check `ast-grep -p 'useApp()'`, `-p 'useMaybeApp()'` | **doprecyzowane**            | 26 (`useApp(`) + 43 (`useMaybeApp(`) = **69 wywołań**                                                                                                                                                                                                                                                    | ~53 → **69** (zaniżone)                                      |
+| ~50 plików konsumentów                                            | `rg -l '\b(useApp\|useMaybeApp)\b' -g '!tla/hooks/useAppState.tsx' \| wc -l`                                                                                               | **doprecyzowane**            | union = **59 plików**                                                                                                                                                                                                                                                                                    | ~50 → **59**                                                 |
+| `useApp()` ~22 plików                                             | `rg -l '\buseApp\b' -g '!…useAppState.tsx' \| wc -l`                                                                                                                       | **potwierdzone**             | **21 plików**                                                                                                                                                                                                                                                                                            | ~22 → 21 (w granicach błędu)                                 |
+| `useMaybeApp()` ~28 plików                                        | `rg -l '\buseMaybeApp\b' -g '!…useAppState.tsx' \| wc -l`                                                                                                                  | **obalone**                  | **39 plików**                                                                                                                                                                                                                                                                                            | ~28 → **39** (istotnie wyżej)                                |
+| `app.z.mutate.*` ~12 sites poza `TldrawApp`                       | `rg -n '\bz\.mutate' apps/dotcom/client/src -g '!**/TldrawApp.ts'`                                                                                                         | **doprecyzowane**            | **13 wywołań w 4 plikach**: `useDragTracking.ts:129`, `TlaSidebarWorkspaceList.tsx:176`, `TlaFileMenu.tsx:145/147/249/266/286/292`, `WorkspaceSettingsDialog.tsx:102/114/129/202/296`                                                                                                                    | ~12 → **13 / 4 pliki**; raport pominął `TlaFileMenu.tsx:286` |
+| `@tldraw/dotcom-shared` w 73 plikach                              | `rg -l "from '@tldraw/dotcom-shared'" \| wc -l`                                                                                                                            | **potwierdzone (dokładnie)** | **73 pliki**; z czego `rg -l … \| rg 'sync-worker' \| wc -l` = **29**                                                                                                                                                                                                                                    | dokładnie 73; sync-worker "9+" → **29**                      |
+| Brak `TestAppState`/`createTestApp`/`mockTldrawApp`/test provider | `rg -n 'TestAppState\|createTestApp\|mockTldrawApp\|FakeApp\|TestTldrawApp'` (cały repo)                                                                                   | **potwierdzone**             | 0 trafień w kodzie; tylko docsy (`context/map/*`, `_rafal_notes/*`)                                                                                                                                                                                                                                      | bez zmian                                                    |
+| 0 testów komponentowych/hookowych w `client/src`                  | `rg -l '@testing-library' apps/dotcom/client/src`; `rg -l 'renderHook\(\|\brender\(' -g '*.test.*'`                                                                        | **potwierdzone**             | 0 i 0; wszystkie 6 plików `*.test.*` to czyste unit-y (`shouldUseProperZero`, `ast-helpers`, `FeatureFlagPoller`, `routes`, `multiplayerAssetStore`, `simpleMermaidStringTest`)                                                                                                                          | bez zmian                                                    |
+| `TlaEditor.tsx` główną granicą app↔SDK                            | `rg -l '<Tldraw\b' apps/dotcom/client/src`                                                                                                                                 | **doprecyzowane**            | **6 punktów `<Tldraw>`**: `TlaEditor.tsx` (główny, app-connected), `LocalEditor.tsx`, `TlaHistorySnapshotEditor`, `TlaPublishEditor`, `TlaLegacySnapshotEditor`, `TlaLegacyFileEditor`                                                                                                                   | główna, ale nie jedyna granica                               |
+| Dwa kanały sync (Zero app-list + `useSync` per-document)          | `rg -n 'useSync\(' client/src`; `rg -n 'new ZeroPolyfill\(\|ZERO_SERVER\|/connect' TldrawApp.ts`; `rg -n 'MULTIPLAYER_SERVER'`                                             | **potwierdzone**             | Kanał A (canvas): `useSync` → `${MULTIPLAYER_SERVER}/app/file/${fileSlug}` (`TlaEditor.tsx:217-219`, też `TlaLegacyFileEditor.tsx:78`). Kanał B (app-list): `ZeroPolyfill` → `${MULTIPLAYER_SERVER}/app/${userId}/connect` (`TldrawApp.ts:262-271`) lub proper Zero → `ZERO_SERVER` (`TldrawApp.ts:209`) | bez zmian                                                    |
+
+**Wniosek netto:** kierunek raportu trzyma się w całości — wszystkie wnioski jakościowe (cienki hook / gruby
+`TldrawApp`, brak izolacji testowej, blast radius w dotcom-shared, sprzężenie z workerem, dwa kanały sync)
+pozostają w mocy. Korekty są **ilościowe i w stronę „gorzej, niż sądzono"**: konsumentów jest więcej (59 plików
+/ 69 wywołań, `useMaybeApp` 39 nie 28), a sprzężenie klient↔worker przez dotcom-shared obejmuje 29 plików
+workera (nie „9+"). Jedyne zmiany etykiet: `useMaybeApp ~28` (obalone → 39) i `TlaEditor jedyna granica`
+(doprecyzowane → 1 z 6 punktów `<Tldraw>`).
 
 ---
 
