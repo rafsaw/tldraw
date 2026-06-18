@@ -9,7 +9,7 @@ tags: [research, codebase, dotcom, useAppState, TldrawApp, zero, sync, blast-rad
 status: complete
 last_updated: 2026-06-17
 last_updated_by: Rafal S
-last_updated_note: 'Dodano sekcję Ast-grep verification — strukturalna weryfikacja liczb (ast-grep + rg); korekty ilościowe konsumentów, z.mutate, dotcom-shared, granic <Tldraw>.'
+last_updated_note: 'Dodano sekcję Ast-grep verification i zsynchronizowano z nią wcześniejsze sekcje (Summary, Feature overview, Technical debt, Historical context, Open questions) — usunięto stare liczby ~53/~50/~28/~12/9+.'
 ---
 
 # Research: Przepływ stanu aplikacji dotcom przez `useAppState`
@@ -145,7 +145,9 @@ pokazuje spinner dopóki `app` jest null (`:47`).
 
 ### Gdzie realnie zmienia się stan (mutatory)
 
-- **EVIDENCE** — wszystkie zapisy idą przez `this.z.mutate.*` (`TldrawApp.ts`): `createFile` (`:648-676`),
+- **EVIDENCE** — w metodach fasady `TldrawApp` zapisy idą przez `this.z.mutate.*`, ale część komponentów omija
+  fasadę i wywołuje `app.z.mutate.*` bezpośrednio (13 wywołań w 4 plikach — patrz §Technical debt → kruche
+  sprzężenia oraz §Ast-grep verification). Metody fasady (`TldrawApp.ts`): `createFile` (`:648-676`),
   `slurpFile` (`:754-758`), `toggleFileShared` (`:760-768`), `publishFile`/`unpublishFile` (`:776-790`/`:825-836`),
   `updateFile` (`:882-884`), `deleteOrForgetFile` (`:841-844`), `updateUser`/`updateUserExportPreferences`
   (`:856-862`/`:864-870`), `tlUser.setUserPreferences` (`:490-501`).
@@ -246,7 +248,7 @@ flowchart TD
 
 ### Kruche sprzężenia
 
-- **EVIDENCE — `app.z.mutate.*` omija fasadę (~12 sites).** Komponenty (`WorkspaceSettingsDialog`, `TlaFileMenu`,
+- **EVIDENCE — `app.z.mutate.*` omija fasadę (13 wywołań w 4 plikach).** Komponenty (`WorkspaceSettingsDialog`, `TlaFileMenu`,
   `useDragTracking`, `TlaSidebarWorkspaceList`) wołają mutatory Zero bezpośrednio, z pominięciem metod
   `TldrawApp`. Refaktor metod god-objectu **nie złapie** tych call-sites — tylko zmiana nazw mutatorów w
   dotcom-shared. To kruche i niewidoczne z poziomu hooka.
@@ -323,8 +325,10 @@ flowchart TD
 
 - **EVIDENCE** — ~9 stron `pages/*` czyta tylko `useMaybeApp()?.userId`; `app.toasts`, `app.hasFlag`,
   `app.copyWorkspaceInvite`, helpery flag — rename to czysty find-replace, niskie ryzyko.
-- **EVIDENCE** — rozróżnienie `useApp()` (22, wymaga app) vs `useMaybeApp()` (28, toleruje null): konsumenci
-  `useMaybeApp` już mają guard `if (!app)`, więc są odporni na nieobecność app.
+- **EVIDENCE** — `useApp()` wymaga app, a `useMaybeApp()` toleruje null; konsumenci `useMaybeApp` mają guard
+  `if (!app)`, więc są odporni na nieobecność app. Ast-grep potwierdził jednak, że `useMaybeApp` ma większy
+  zasięg, niż pierwotnie zakładano: **43 wywołania w 39 plikach** (vs `useApp()` — 26 wywołań w 21 plikach) —
+  więc choć każdy taki call-site jest „tani", jest ich więcej do przejrzenia.
 
 ### Obszary, których nie dało się potwierdzić (unknown)
 
@@ -397,7 +401,8 @@ workera (nie „9+"). Jedyne zmiany etykiet: `useMaybeApp ~28` (obalone → 39) 
 
 - `context/map/repo-map.md` — strefa ryzyka #2 (`useAppState` god-hook, brak `TestAppState`, 51+ konsumentów)
   i §7 known-unknown o `useAppState`. Niniejszy research uściśla: hook jest cienki, ciężar w `TldrawApp`/Zero;
-  "51+" potwierdzone (~50); brak `TestAppState` potwierdzony; realny blast radius to dotcom-shared (73 pliki).
+  "51+" z mapy okazało się zaniżone — ast-grep/rg potwierdziły **69 wywołań w 59 plikach**; brak `TestAppState`
+  potwierdzony; realny blast radius to dotcom-shared (73 pliki, w tym 29 plików sync-workera).
 - Git co-change (z analizy blast-radius): `43192064d` (group capabilities) dotknął `TldrawApp.ts` + 4 pliki
   sync-worker + dotcom-shared razem; `3cde6c462` (server-side user init) — `TldrawApp.ts` + `useAppState.tsx` +
   `TLUserDurableObject.ts` + `mutators.ts`; `21002dc7c` (Zero spike) — `TldrawApp.ts` + `zero-polyfill.ts` +
@@ -410,9 +415,9 @@ workera (nie „9+"). Jedyne zmiany etykiet: `useMaybeApp ~28` (obalone → 39) 
 
 ## Open questions
 
-- Czy `TldrawApp` da się uczynić testowalnym przez seam iniekcji `z` (fake Zero) bez ruszania ~50 konsumentów?
-  (pytanie projektowe — poza zakresem tej analizy).
-- Ile z ~12 call-sites `app.z.mutate.*` dałoby się sprowadzić z powrotem do fasady `TldrawApp` i czy to
+- Czy `TldrawApp` da się uczynić testowalnym przez seam iniekcji `z` (fake Zero) bez ruszania 59 plików
+  konsumentów? (pytanie projektowe — poza zakresem tej analizy).
+- Ile z 13 call-sites `app.z.mutate.*` dałoby się sprowadzić z powrotem do fasady `TldrawApp` i czy to
   zmniejszyłoby blast radius wobec dotcom-shared.
 - Czy istnieje serwerowy test kontraktu mutatorów (sync-worker), który chroniłby przed rozjazdem schematu
   klient↔worker (poza `Z_PROTOCOL_VERSION`).
